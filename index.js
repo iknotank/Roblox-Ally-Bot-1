@@ -43,7 +43,7 @@ const getCSRF = async () => {
             console.log(chalk.red("[Error] : " +err))
             if (err.response.status == 429) {
                 console.log(chalk.red("[Error] : Rate Limited"))
-                console.log(chalk.blue.bold("[LOGGER] : It is expected to be 10 requests per 10 minutes"))
+                console.log(chalk.blue.bold("[LOGGER] : It is expected to be 5 requests per 5 to 10 minutes"))
                 console.log(chalk.blue.bold("[LOGGER] : Waiting 5 minutes"))
                 await new Promise(resolve => setTimeout(resolve, 500000))
             }
