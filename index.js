@@ -27,7 +27,7 @@ const getCSRF = async () => {
 }
 (async () => {
     console.log(chalk.blue.bold("By :"))
-    console.log(chalk.underline.blue.bold("Discord :  _mrunknown_"))
+    console.log(chalk.blue.bold("Discord :  _mrunknown_"))
     console.log(chalk.underline.blue.bold("Github :  @CodeCarbon"))
 
     var csrf = await getCSRF()
