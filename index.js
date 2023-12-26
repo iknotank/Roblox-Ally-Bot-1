@@ -40,7 +40,7 @@ const getCSRF = async () => {
             await request("groups.roblox.com/v1/groups/" + group + "/relationships/allies/" + sentGroup, csrf)
             console.log(chalk.green("[Success] :" + sentGroup))
         } catch (err) {
-            console.log(chalk.red("[Error] : " +err))
+            console.log(chalk.red("[Error] : " + err))
             if (err.response.status == 429) {
                 console.log(chalk.red("[Error] : Rate Limited"))
                 console.log(chalk.blue.bold("[LOGGER] : It is expected to be 5 requests per 5 to 10 minutes"))
