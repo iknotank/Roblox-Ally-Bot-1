@@ -1,7 +1,7 @@
 import axios from "axios"
 import chalk from "chalk"
 
-const cookie = " YOUR COOKIE  HERE"
+const cookie = "YOUR COOKIE  HERE"
 const group = "6290210" // group id
 
 // who cares about impure fn 🥱 ?
