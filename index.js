@@ -2,7 +2,7 @@
 import axios from "axios";
 import chalk from "chalk";
 import readline from "node:readline/promises";
-import fs from "node:fs/promises";
+import fs from "node:fs";
 
 //-----------------------DEFINE-----------------------//
 const log = console.log
@@ -14,7 +14,7 @@ const rl = readline.createInterface({
 //-----------------------CONFIGURATIONS-----------------------//
 
 //Load data from data.json
-const data = await fs.readFile("data.json")
+const data = fs.readFileSync("data.json")
 const json = JSON.parse(data)
 
 var cookie = json.cookie //cookie format : [.ROBLOSECURITY, .RBXIDCHECK, RBXEventTrackerV2"]
@@ -40,7 +40,7 @@ var sendMsg = json.msg
 */
 
 const readProxy = async () => {
-    const data = await fs.readFile("proxy.txt")
+    const data = fs.readFileSync("proxy.txt")
     const proxies = data.toString().split("\n")
     if (proxies.length == 0) log(chalk.red.bold("[ERROR] : Proxy.txt is empty")) && process.exit()
     return proxies
@@ -66,7 +66,7 @@ const ask = async () => {
     sendMsg = await rl.question(chalk.redBright.bold("[INPUT] Send Message ? [y/n] : ")) == "y" ? true : false
 
     //write to data.json
-    await fs.writeFile("data.json", JSON.stringify({
+    fs.writeFileSync("data.json", JSON.stringify({
         cookie: cookie,
         group: group,
         range: range,
@@ -156,6 +156,8 @@ const sendMessage = async (id, csrf) => {
     log(chalk.blue.bold("\t\t\t\t\tDiscord :  _mrunknown_"))
     log(chalk.blue.bold("\t\t\t\t\tGithub :  @CodeCarbon\n\n"))
 
+    const version = (await axios.get("https://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/version")).data
+    fs.readFileSync("version").toString() != version && log(chalk.yellowBright.bold("[WARNING] : New version available, update to the latest version"))
     if (cookie == "") {
         log(chalk.blue.bold("[LOGGER] : Cookie is empty"))
         await ask()
