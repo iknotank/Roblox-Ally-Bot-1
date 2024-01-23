@@ -82,7 +82,7 @@ const request = async (api, csrf = "", data = {}) => {
     var proxy = {
         host: "",
         port: "",
-        protocol: "http"
+        protocol: "https"
     }
     if (useProxy) {
         const proxies = await readProxy()
@@ -101,7 +101,7 @@ const request = async (api, csrf = "", data = {}) => {
         proxy: useProxy && {
             host: proxy.host,
             port: proxy.port,
-            protocol: "http"
+            protocol: "https"
         }
     })
 }
