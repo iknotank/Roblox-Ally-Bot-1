@@ -48,7 +48,7 @@ const readProxy = async () => {
 }
 
 const ask = async () => {
-    console.log(chalk.magentaBright.bold("[LOGGER] : Right Click inside this window to paste"))
+    log(chalk.magentaBright.bold("[LOGGER] : Right Click inside this window to paste"))
     //remove previous cookie
     cookie = []
     cookie.push(await rl.question(chalk.redBright.bold("[INPUT] .ROBLOSECURITY : ")))
@@ -78,7 +78,7 @@ const ask = async () => {
 }
 
 // anyone cares about impure fn 🥱 ?
-const request = async (api, csrf = "", data = {}, rb) => {
+const request = async (api, csrf = "", data = {}) => {
     var proxy = {
         host: "",
         port: "",
@@ -91,14 +91,13 @@ const request = async (api, csrf = "", data = {}, rb) => {
         proxy.host = proxySplit[0], proxy.port = proxySplit[1]
     }
 
-    return axios.post("https://" + api, "", {
+    return axios.post("https://" + api, data, {
+        method: "POST",
         headers: {
-            Cookie: ".ROBLOSECURITY=" + rb[0] + "; RBXEventTrackerV2=" + rb[2] + "; .RBXIDCHECK=" + rb[1],
+            Cookie: ".ROBLOSECURITY=" + cookie[0] + "; RBXEventTrackerV2=" + cookie[1] + "; .RBXIDCHECK=" + cookie[2],
             'X-Csrf-Token': csrf,
             "Content-Type": "application/json"
         },
-        data: JSON.stringify(data),
-
         proxy: useProxy && {
             host: proxy.host,
             port: proxy.port,
@@ -107,14 +106,21 @@ const request = async (api, csrf = "", data = {}, rb) => {
     })
 }
 
-
 const getCSRF = async () => {
     log(chalk.blue.bold("[LOGGER] : Getting CSRF Token"))
-    console.log(cookie)
     return new Promise(resolve => {
         request("auth.roblox.com/v2/logout")
-            .catch(res => {
-                const csrf = res.response.headers['x-csrf-token']
+            .catch(async res => {
+                var csrf = res.response?.headers?.['x-csrf-token']
+                if (!csrf) {
+                    log(chalk.red.bold("[ERROR] : Invalid cookie"))
+                    if (cookies.length > 0) {
+                        log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
+                        cookie = cookies[cookieLength++]
+                        csrf = await getCSRF();
+
+                    }
+                }
                 log(chalk.blue.bold("[LOGGER] : CSRF Token : " + csrf))
                 resolve(csrf)
             })
@@ -181,7 +187,7 @@ const sendMessage = async (id, csrf) => {
             log(chalk.red.bold("[ERROR] : cookies.json is empty"))
             process.exit()
         }
-        log(chalk.blue.bold("[LOGGER] : " + cookies.length / 2 + " accounts detected"))
+        log(chalk.blue.bold("[LOGGER] : " + cookies.length + " accounts detected"))
         cookie = cookies[cookieLength]
         var csrf = await getCSRF()
     }
@@ -216,7 +222,11 @@ const sendMessage = async (id, csrf) => {
                 }
                 log(chalk.magentaBright.bold("[LOGGER] : check if the bot is in the group and has permission to ally as well as the the cookie is valid"))
                 log(chalk.magentaBright.bold("[LOGGER] : Exiting in 120 seconds"))
-                setTimeout(process.exit, 120)
+                await new Promise(resolve => setTimeout(resolve, 120000))
+                process.exit()
+
+            } else if (err.response.status == 404) {
+                continue;
             }
             csrf = await getCSRF()
         }
