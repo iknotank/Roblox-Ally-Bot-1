@@ -1,10 +1,1 @@
-{
-    "cookie": [],
-    "id": "",
-    "range": {
-        "min": 8802477,
-        "max": 8802487
-    },
-    "proxy": false,
-    "msg": false
-}
+{"cookie":["","",""],"group":"","range":{"min":8802477,"max":8802487},"proxy":false,"msg":false}
