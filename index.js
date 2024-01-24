@@ -52,8 +52,8 @@ const ask = async () => {
     //remove previous cookie
     cookie = []
     cookie.push(await rl.question(chalk.redBright.bold("[INPUT] .ROBLOSECURITY : ")))
-    cookie.push(await rl.question(chalk.redBright.bold("[INPUT] .RBXIDCHECK[Press enter if doesn't exits] : ")))
     cookie.push(await rl.question(chalk.redBright.bold("[INPUT] RBXEventTrackerV2 : ")))
+    cookie.push(await rl.question(chalk.redBright.bold("[INPUT] .RBXIDCHECK[Press enter if doesn't exits] : ")))
     group = await rl.question(chalk.redBright.bold("[INPUT] Group ID : "))
     log(chalk.blue.bold("[LOGGER] : A random group id will be picked within range [default: 8802477, 8802487]"))
     const random = await rl.question(chalk.redBright.bold("[INPUT] Use Deafult range ? [y/n] : "))
@@ -62,7 +62,8 @@ const ask = async () => {
         range.min = parseInt(await rl.question(chalk.redBright.bold("[INPUT] Min[ex : 8802477, must be lower than max] : ")))
         range.max = parseInt(await rl.question(chalk.redBright.bold("[INPUT] Max[ex : 8802487 must be higher than min] : ")))
     }
-    chalk.blue.bold("[LOGGER] : Make sure proxy supports HTTPS protocol")
+    chalk.blue.bold("[LOGGER] : Make sure proxy supports HTTP protocol")
+    chalk.blue.bold("[LOGGER] : Proxy format ip:port")
     useProxy = await rl.question(chalk.redBright.bold("[INPUT] Use Proxy ? [y/n] : ")) == "y" ? true : false
     sendMsg = await rl.question(chalk.redBright.bold("[INPUT] Send Message ? [y/n] : ")) == "y" ? true : false
 
@@ -82,7 +83,7 @@ const request = async (api, csrf = "", data = {}) => {
     var proxy = {
         host: "",
         port: "",
-        protocol: "https"
+        protocol: "http"
     }
     if (useProxy) {
         const proxies = await readProxy()
@@ -91,7 +92,7 @@ const request = async (api, csrf = "", data = {}) => {
         proxy.host = proxySplit[0], proxy.port = proxySplit[1]
     }
 
-    return axios.post("https://" + api, data, {
+    return axios.post("http://" + api, data, {
         method: "POST",
         headers: {
             Cookie: ".ROBLOSECURITY=" + cookie[0] + "; RBXEventTrackerV2=" + cookie[1] + "; .RBXIDCHECK=" + cookie[2],
@@ -101,7 +102,7 @@ const request = async (api, csrf = "", data = {}) => {
         proxy: useProxy && {
             host: proxy.host,
             port: proxy.port,
-            protocol: "https"
+            protocol: "http"
         }
     })
 }
@@ -113,13 +114,13 @@ const getCSRF = async () => {
             .catch(async res => {
                 var csrf = res.response?.headers?.['x-csrf-token']
                 if (!csrf) {
-                    log(chalk.red.bold("[ERROR] : Invalid cookie"))
+                    log(chalk.red.bold("[ERROR] : Invalid cookie"+ (useProxy ? " or proxy" : "")))
                     if (cookies.length > 0) {
                         log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                         cookie = cookies[cookieLength++]
                         csrf = await getCSRF();
-
                     }
+                    process.exit()
                 }
                 log(chalk.blue.bold("[LOGGER] : CSRF Token : " + csrf))
                 resolve(csrf)
@@ -129,17 +130,21 @@ const getCSRF = async () => {
 
 const sendMessage = async (id, csrf) => {
     log(chalk.blue.bold("[LOGGER] : Sending Message"))
-    const raw = (await request("https://groups.roblox.com/v1/groups/" + id)).catch(() => {
+    const raw = (await request("groups.roblox.com/v1/groups/" + id)).catch(() => {
         log(chalk.red.bold("[ERROR] : Group is invalid"))
         process.exit()
     }).data
-
+    const canSend = await request("privatemessages.roblox.com/v1/messages/" + raw.owner.userId + "/can-message", csrf)
+    if (!canSend.data.canMessage) {
+        log(chalk.red.bold("[ERROR] : Cannot send message to this user"))
+        return
+    }
     const format = {
         "subject": "Group Ally Request",
-        "body": "yo i want to ally your group, please accept it :D \n also please join my group : https://www.roblox.com/groups/" + group + "/", //don't fix the grammar caz it will be humanable and legit like
+        "body": "yo i want to ally your group, please accept it :D \n also please join my group : http://www.roblox.com/groups/" + group + "/", //don't fix the grammar caz it will be humanable and legit like
         "recipientId": raw.owner.userId,
     }
-    request("https://privatemessages.roblox.com/v1/messages/send", csrf, format)
+    request("privatemessages.roblox.com/v1/messages/send", csrf, format)
         .then(() => {
             log(chalk.green.bold("[SUCCESS] : Message sent"))
             resolve(csrf)
@@ -165,7 +170,7 @@ const sendMessage = async (id, csrf) => {
     log(chalk.blue.bold("\t\t\t\t\tDiscord :  _mrunknown_"))
     log(chalk.blue.bold("\t\t\t\t\tGithub :  @CodeCarbon\n\n"))
 
-    const version = (await axios.get("https://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/version")).data
+    const version = (await axios.get("http://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/version")).data
     fs.readFileSync("version").toString() != version && log(chalk.yellowBright.bold("[WARNING] : New version available, update to the latest version"))
 
     var useMultiCookie = "N";
@@ -189,14 +194,14 @@ const sendMessage = async (id, csrf) => {
         }
         log(chalk.blue.bold("[LOGGER] : " + cookies.length + " accounts detected"))
         cookie = cookies[cookieLength]
-        var csrf = await getCSRF()
     }
+    var csrf = await getCSRF()
     while (true) {
         const sentGroup = Math.floor(Math.random() * (range.max - range.min) + range.min)
         log(chalk.blue.bold("[LOGGER] : Sending request to : " + sentGroup))
         try {
             await request("groups.roblox.com/v1/groups/" + group + "/relationships/allies/" + sentGroup, csrf)
-            log(chalk.green("[Success] :" + sentGroup))
+            log(chalk.green("[Success] : Sent to" + sentGroup))
             sendMsg && await sendMessage(sentGroup, csrf)
         } catch (err) {
             log(chalk.yellowBright("[DEBUGGER] : " + err))
