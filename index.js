@@ -20,8 +20,10 @@ const json = JSON.parse(data)
 var cookie = json.cookie //cookie format : [.ROBLOSECURITY, .RBXIDCHECK, RBXEventTrackerV2"]
 var group = json.group
 var range = json.range
+const proxies = fs.readFileSync("proxy.txt").toString().split("\n")
 var useProxy = json.proxy
 var sendMsg = json.msg
+var proxyLength = 0
 var cookies = []
 var cookieLength = 0
 
@@ -40,11 +42,15 @@ var cookieLength = 0
     wanna host 24/7 on a hosting server for free [run even while your pc is off or you are offline without using any of your pc resources]? contact me in discord for more info
 */
 
-const readProxy = async () => {
-    const data = fs.readFileSync("proxy.txt")
-    const proxies = data.toString().split("\n")
-    if (proxies.length == 0) log(chalk.red.bold("[ERROR] : Proxy.txt is empty")) && process.exit()
-    return proxies
+
+const getProxy = async () => {
+    if (proxyLength > proxies.length) {
+        log(chalk.blue.bold("[LOGGER] : It is expected to be 5 requests per 5-10 minutes"))
+        log(chalk.blue.bold("[LOGGER] : Waiting 5 minutes"))
+        await new Promise(resolve => setTimeout(resolve, 500000))
+        proxyLength = 0
+    }
+    return proxies[proxyLength];
 }
 
 const ask = async () => {
@@ -83,16 +89,14 @@ const request = async (api, csrf = "", data = {}) => {
     var proxy = {
         host: "",
         port: "",
-        protocol: "http"
+        protocol: "https"
     }
     if (useProxy) {
-        const proxies = await readProxy()
-        const ranProxy = proxies[Math.floor(Math.random() * proxies.length)]
-        const proxySplit = ranProxy.split(":")
+        const proxySplit = (await getProxy()).split(":")
         proxy.host = proxySplit[0], proxy.port = proxySplit[1]
     }
 
-    return axios.post("http://" + api, data, {
+    return axios.post("https://" + api, data, {
         method: "POST",
         headers: {
             Cookie: ".ROBLOSECURITY=" + cookie[0] + "; RBXEventTrackerV2=" + cookie[1] + "; .RBXIDCHECK=" + cookie[2],
@@ -102,7 +106,7 @@ const request = async (api, csrf = "", data = {}) => {
         proxy: useProxy && {
             host: proxy.host,
             port: proxy.port,
-            protocol: "http"
+            protocol: "https"
         }
     })
 }
@@ -114,7 +118,7 @@ const getCSRF = async () => {
             .catch(async res => {
                 var csrf = res.response?.headers?.['x-csrf-token']
                 if (!csrf) {
-                    log(chalk.red.bold("[ERROR] : Invalid cookie"+ (useProxy ? " or proxy" : "")))
+                    log(chalk.red.bold("[ERROR] : Invalid cookie" + (useProxy ? " or proxy" : "")))
                     if (cookies.length > 0) {
                         log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                         cookie = cookies[cookieLength++]
@@ -207,6 +211,14 @@ const sendMessage = async (id, csrf) => {
             log(chalk.yellowBright("[DEBUGGER] : " + err))
             if (err.response.status == 429) {
                 log(chalk.red("[Error] : Rate Limited (429)"))
+                if (useProxy) {
+                    log(chalk.magentaBright.bold("[LOGGER] : Proxy is rate limited"));
+                    log(chalk.magentaBright.bold("[LOGGER] : Trying next proxy"));
+                    proxyLength++
+                    await new Promise(resolve => setTimeout(resolve, 3000))
+                    csrf = await getCSRF()
+                    continue;
+                }
                 if (useMultiCookie == "Y" || useMultiCookie == "y") {
                     log(chalk.magentaBright.bold("[LOGGER] : Using next cookie"));
                     cookie = cookies[cookieLength++]
@@ -222,18 +234,22 @@ const sendMessage = async (id, csrf) => {
                     log(chalk.magentaBright.bold("[LOGGER] : Invalid cookie"));
                     log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                     cookie = cookies[cookieLength++]
-                    csrf = await getCSRF()
+                    csrf = await getCSRF();
                     continue;
                 }
                 log(chalk.magentaBright.bold("[LOGGER] : check if the bot is in the group and has permission to ally as well as the the cookie is valid"))
-                log(chalk.magentaBright.bold("[LOGGER] : Exiting in 120 seconds"))
+                log(chalk.magentaBright.bold("[LOGGER] : Retrying in 120 seconds"))
                 await new Promise(resolve => setTimeout(resolve, 120000))
-                process.exit()
-
+                continue;
             } else if (err.response.status == 404) {
                 continue;
+            } else if(err.response.status == 400) {
+                log(chalk.red("[ERROR] : Already sent ally request"))
+                continue;
+            } else {
+                csrf = await getCSRF()
+                continue;
             }
-            csrf = await getCSRF()
         }
     }
 })();
