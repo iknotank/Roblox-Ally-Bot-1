@@ -1,5 +1,10 @@
 # Roblox Group Ally Setup Guide
 
+## Note
+```
+We will provide an service for this, 250 robux per hour, without any ratelimit, you sent an minimum of atleast 5000 ally
+```
+
 ## Requirements
 - Node.js and npm installed on your system
 - Roblox account with the necessary permissions
@@ -59,10 +64,5 @@ Note : Proxy must support http protocol
 - Ensure you have the necessary permissions to access the Roblox API for the intended group.
 - Double-check the correctness of the provided cookie.
 - Proxy must support HTTP protocol
-
-# Extra Services
-- To host this code 24/7 [Cost: 1000 Robux].
-- For Premium Proxy List [100 Robux per 10 Proxy]
-- For a Mass Group bot Member [100 Robux per 20 members].
 
 DM on Discord for more information:  `_mrunknown_`
