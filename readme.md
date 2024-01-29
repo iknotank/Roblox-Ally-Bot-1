@@ -2,7 +2,7 @@
 
 ## Note
 ```
-We will provide an service for this, 250 robux per hour, without any ratelimit, you sent an minimum of atleast 5000 ally
+We will provide an service for this, 250 robux per hour, without any ratelimit, you will sent an minimum of atleast 5000 ally
 ```
 
 ## Requirements
