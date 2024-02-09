@@ -3,6 +3,13 @@
 
 `Discord-server : https://discord.gg/QT4MUZKjjp`  
 
+
+## Version 7 : 
+- Added Proxy : roproxy, without proxy , custom proxy[proxy.txt]
+- Added Discord webhook
+- Save Configuration
+- AutoUpdate 
+
 ## Requirements
 - Node.js and npm installed on your system
 - Roblox account with the necessary permissions
