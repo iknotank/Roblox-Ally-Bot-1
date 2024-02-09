@@ -1,5 +1,8 @@
 # Roblox Group Ally Setup Guide
 
+
+`Discord-server : https://discord.gg/QT4MUZKjjp`  
+
 ## Requirements
 - Node.js and npm installed on your system
 - Roblox account with the necessary permissions
@@ -60,9 +63,5 @@ Note : Proxy must support http protocol
 - Double-check the correctness of the provided cookie.
 - Proxy must support HTTP protocol
 
-# Extra Services
-- To host this code 24/7 [Cost: 1000 Robux].
-- For Premium Proxy List [100 Robux per 10 Proxy]
-- For a Mass Group bot Member [100 Robux per 20 members].
 
 DM on Discord for more information:  `_mrunknown_`

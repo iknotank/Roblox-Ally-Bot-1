@@ -5,12 +5,16 @@
   },
   "name": "roblox-group-allie",
   "version": "1.0.0",
-  "type": "module",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "@CodeCarbon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeCarbon/Roblox-Ally-Bot.git"
+  },
   "license": "ISC",
-  "description": ""
+  "description": "send ally request to a random groups"
 }
