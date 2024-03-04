@@ -1,7 +1,10 @@
 {
   "dependencies": {
     "axios": "^1.6.2",
-    "chalk": "^5.3.0"
+    "chalk": "^5.3.0",
+    "express": "^4.18.3",
+    "inquirer": "^9.2.15",
+    "nanospinner": "^1.1.0"
   },
   "name": "roblox-group-allie",
   "version": "1.0.0",

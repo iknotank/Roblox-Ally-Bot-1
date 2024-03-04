@@ -3,6 +3,13 @@
 
 `Discord-server : https://discord.gg/QT4MUZKjjp`  
 
+## Version 8 :
+- Removed webhook
+- Removed AutoUpdate
+- Added MultiCookie
+- Improved Input system
+
+I haven't tested this because the sending ally algorithm is the same as last version tested one. If it didn't work, DM me.
 
 ## Version 7 : 
 - Added Proxy : roproxy, without proxy , custom proxy[proxy.txt]

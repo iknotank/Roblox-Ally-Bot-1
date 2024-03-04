@@ -3,42 +3,43 @@
 //-----EXTERNAL MODULES------//
 import axios from "axios";
 import chalk from "chalk";
+import inquirer from "inquirer";
+import { createSpinner } from 'nanospinner';
 
 //------BUILD-IN MODULES------//
-import readline from "node:readline/promises";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+
+//------CUSTOM MODULES------//
+//import {ln, event} from "./dash.js";
+//in next update
 
 //-----------------------DEFINE-----------------------//
 
 
 const log = console.log
-const __filename = fileURLToPath(import.meta.url); //__filename and __dirname are not available in es6 modules
-const __dirname = path.dirname(__filename);
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-})
+
 //-----------------------CONFIGURATIONS-----------------------//
 
 //Load data from data.json
 const data = fs.readFileSync("data.json")
 const json = JSON.parse(data)
-
-var cookie = json.cookie //cookie format : [.ROBLOSECURITY, .RBXIDCHECK, RBXEventTrackerV2"]
+var cookie = json.cookie //cookie format : [.ROBLOSECURITY, .RBXIDCHECK]
 var group = json.group
 var webhook = json.webhook
 var range = json.range
 var sendMsg = json.msg
-//var useProxy = json.useProxy
+
+//Proxy
 var proxyType = 0 // 0 for no-proxy 1 for roproxy 2 for proxies from proxy.txt
 const proxies = fs.readFileSync("proxy.txt").toString().split("\n")
 var proxyLength = 0
-///not really usefull but did it anyway
-var cookies = []
+
+//Multi cookie
+const cookies = JSON.parse(fs.readFileSync("cookies.json"));
 var cookieLength = 0
-var useMultiCookie = "N"
+var useMultiCookie = false
+
+
 //-----------------------FUNCTIONS-----------------------//
 
 
@@ -58,100 +59,169 @@ var useMultiCookie = "N"
 
 const getProxy = async () => {
     if (proxyLength > proxies.length) {
-        weblog("PROXY", " No more proxies available, Reading proxies from start")
-        log(chalk.blue.bold("[LOGGER] : It is expected to be 5 requests per 5-10 minutes"))
-        log(chalk.blue.bold("[LOGGER] : Waiting 3 minutes"))
-        await sleep(300000)
+        // weblog("PROXY", " No more proxies available, Reading proxies from start")
+        log(chalk.blue.bold("[LOGGER] : waiting 5 minutes"))
+        await sleep(1000 * 5 * 60)
         proxyLength = 0
     }
     return proxies[proxyLength];
 }
 
-const weblog = (title, description) => {
-    // removed await
-    if (webhook != "") axios.post(webhook, {
-        avatar_url: "https://cdn.discordapp.com/avatars/715220624154558554/711c4bd66b0c300e6e31837c77879e8b.png?size=1024",
-        embeds: [
-            {
-                title: title,
-                description: description,
-                author: {
-                    name: "Roblox Ally Bot",
-                    url: "https://github.com/CodeCarbon/Roblox-Ally-Bot" //base group
-                },
-                footer: {
-                    text: "Join our group, https://www.roblox.com/groups/6290210",
-                    iconUrl: "https://tr.rbxcdn.com/4776872309e68ede849031a22777cf2a/150/150/Image/Png"
-                },
-            }
-        ],
-    });
-}
-
-
 const sleep = async ms => {
     log(chalk.blue.bold("[LOGGER] : Waiting " + Math.floor(ms / 1000) + " seconds"));
-    weblog("Delay", `Waiting ${Math.floor(ms / 1000)} seconds`);
+    // weblog("Delay", `Waiting ${Math.floor(ms / 1000)} seconds`);
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const update = async () => {
-    return new Promise(async resolve => {
-        log(chalk.blue.bold("[LOGGER] : New version available, updating to the latest version"))
-        weblog("UPDATE", "New version available, updating to the latest version");
-        log(chalk.redBright.bold("[LOGGER] : Updating"))
-        weblog("UPDATE", "Updating")
+const askStart = async () => {
+    const ans = await inquirer.prompt([
+        /*{
+            type: "confirm",
+            name: "dash",
+            message: `Do you want to use the dash ? ${chalk.magentaBright("<Recommended>")}`,
+            default: true
+        },
+        */
+        {
+            type: "list",
+            name: "proxyType",
+            message: "Select Proxy Type",
+            choices: ["No-Proxy", "roproxy", `Custom Proxy ${chalk.magentaBright("<Recommend>")}`],
+            deafult: "No-Proxy"
+        },
+        {
+            type: "list",
+            name: "cookie",
+            message: "Select Cookie Mode",
+            choices: ["Single Cookie", `Multi Cookie ${chalk.magentaBright("<Recommended>")}`],
+            /*
+            {
+            key: "single",
+            name: "Single Cookie"
+        },
+        {
+            key: "multi",
+            name: `Multi Cookie ${chalk.magentaBright("<Recommended>")}`,
+        }
+        ],
+        */
+            default: "Single Cookie"
+        }
+    ])
+    if (ans.proxyType == "1") {
+        proxyType = 1
+        log(chalk.blue.bold("[LOGGER] : Using roproxy"))
+    } else if (ans.proxyType == "2") {
+        proxyType = 2
+        log(chalk.blue.bold("[LOGGER] : Using proxy from proxy.txt<IP:PORT>"))
+    } else {
+        log(chalk.blue.bold("[LOGGER] : No-Proxy"))
+    }
 
-        const indexjs = (await axios('http://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/index.js')).data
-        fs.writeFileSync(__dirname + '/index.js', indexjs.toString(), 'utf8');
-
-        const datajson = JSON.stringify((await axios('http://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/data.json')).data)
-        fs.writeFileSync(__dirname + '/data.json', datajson, 'utf8');
-
-        const packagejson = JSON.stringify((await axios('http://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/package.json')).data)
-        fs.writeFileSync(__dirname + '/package.json', packagejson.toString(), 'utf8');
-
-        const version = (await axios('http://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/version')).data
-        fs.writeFileSync(__dirname + '/version', version.toString(), 'utf8');
-        log(chalk.green.bold("[LOGGER] : Updated"))
-        weblog("UPDATE", "Updated")
-        resolve(process.exit())
-    })
+    if (ans.cookie == "Single Cookie") {
+        useMultiCookie = false
+        log(chalk.blue.bold("[LOGGER] : Using Single Cookie"))
+    } else {
+        useMultiCookie = true
+        log(chalk.blue.bold("[LOGGER] : Using Multi Cookie"))
+         //log(chalk.blue.bold("[LOGGER] : Look at dash for more info"));
+         log(chalk.blue.magentaBright("Look at readme.md file on github for more info"));
+            if (cookies.length == 0) {
+                log(chalk.red.bold("[ERROR] : cookies.json is empty"))
+                process.exit()
+            }
+            log(chalk.blue.bold("[LOGGER] : " + cookies.length + " accounts detected"))
+            cookie = cookies[cookieLength]
+    }
+    if (cookie.length < 0 && !useMultiCookie) {
+        await ask()
+    } else {
+        const usePreConfig = await inquirer.prompt([
+            {
+                type: "confirm",
+                name: "usePreConfig",
+                message: "Use pre-configured settings ?",
+                default: true
+            }
+        ])
+        if (!usePreConfig.usePreConfig) {
+            await ask()
+        }
+    }
 }
 
+
 const ask = async () => {
-    log(chalk.magentaBright.bold("[LOGGER] : Right Click inside this window to paste"))
-    //remove previous cookie
-    cookie = []
-    cookie.push(await rl.question(chalk.redBright.bold("[INPUT] .ROBLOSECURITY : ")))
-    cookie.push(await rl.question(chalk.redBright.bold("[INPUT] RBXEventTrackerV2 : ")))
-    cookie.push(await rl.question(chalk.redBright.bold("[INPUT] .RBXIDCHECK[Press enter if doesn't exits] : ")))
-    group = await rl.question(chalk.redBright.bold("[INPUT] Group ID : "))
-    log(chalk.magenta.bold("[LOGGER] : Recommend only when host this bot"))
-    webhook = await rl.question(chalk.redBright.bold("[INPUT] Webhook [Press enter to leave empty] : "))
-    if (webhook != "") {
-        log(chalk.blue.bold("[LOGGER] : Webhook is set to " + webhook))
-        log(chalk.magenta.bold("[LOGGER] : Message will be sent to webhook after each ally request from base group"))
+    log(chalk.magentaBright.bold("\n[LOGGER] : Right Click inside this window to paste"))
+    log(chalk.magentaBright.bold("[LOGGER] : Press Enter to submit\n"))
+
+    const answer = await inquirer.prompt([
+        {
+            type: "input",
+            name: "roboxsecurity",
+            message: "Enter .ROBLOSECURITY : "
+        },
+        {
+            type: "input",
+            name: "rbxidcheck",
+            message: "Enter .RBXIDCHECK[Press Enter if doesn't exits] : "
+        },
+        {
+            type: "input",
+            name: "group",
+            message: "Enter Group ID : "
+        },
+        {
+            type: "input",
+            name: "webhook",
+            message: "Enter Webhook [Press enter to leave empty] : ",
+        },
+        {
+            type: "list",
+            name: "range",
+            message: "Custom Range ?: ",
+            choices: [{
+                key: "Default",
+                name: "Default [8802477, 8802487]",
+            }, "Custom"],
+            default: "Default",
+        },
+    ])
+    if (answer.range == "Custom") {
+        const rangeQ = await inquirer.prompt([
+            {
+                type: "number",
+                name: "min",
+                message: "Enter Min[ex : 8802477, must be lower than max] : "
+            },
+            {
+                type: "number",
+                name: "max",
+                message: "Enter Max[ex : 8802487 must be higher than min] : "
+            }
+        ])
+        range = {
+            min: rangeQ.min,
+            max: rangeQ.max
+        }
+    } else {
+        range = {
+            min: 8802477,
+            max: 8802487
+        }
     }
-    log(chalk.blue.bold("[LOGGER] : A random group id will be picked within range [default: 8802477, 8802487]"))
-    const random = await rl.question(chalk.redBright.bold("[INPUT] Use Deafult range ? [y/n] : "))
-    if (random == "N" || random == "n") {
-        log(chalk.blue.bold("[LOGGER] : Enter range"))
-        range.min = parseInt(await rl.question(chalk.redBright.bold("[INPUT] Min[ex : 8802477, must be lower than max] : ")))
-        range.max = parseInt(await rl.question(chalk.redBright.bold("[INPUT] Max[ex : 8802487 must be higher than min] : ")))
-    }
-    log(chalk.blue.bold("[LOGGER] : Message will be sent to group owner [not recommend to use this, most likely the message is turned off]"))
-    sendMsg = await rl.question(chalk.redBright.bold("[INPUT] Send Message ? [y/n] : ")) == "y" ? true : false
-    log(chalk.blue.bold("[LOGGER] : Using proxy will be slower but more stable"))
-    //write to data.json
+
+    cookie = [answer.roboxsecurity, answer.rbxidcheck]
+    group = answer.group
+    webhook = answer.webhook
+
     fs.writeFileSync("data.json", JSON.stringify({
         cookie: cookie,
         group: group,
         webhook: webhook,
-        range: range,
-        msg: sendMsg
-    }))
-    log(chalk.blue.bold("[LOGGER] : CONFIGURATION SAVED"))
+        range: range
+    }));
+    log(chalk.green.bold("\n[LOGGER] : CONFIGURATION SAVED\n"))
 }
 
 // anyone cares about impure fn 🥱 ?
@@ -169,7 +239,7 @@ const request = async (api, csrf = "", data = {}, method = "POST", useCookie = t
         method: method,
         headers: {
             //to prevent auto log out while using with cloud
-            Cookie: useCookie ? ".ROBLOSECURITY=" + cookie[0] + "; RBXEventTrackerV2=" + cookie[1] + "; .RBXIDCHECK=" + cookie[2] : "",
+            Cookie: useCookie ? ".ROBLOSECURITY=" + cookie[0] + "; .RBXIDCHECK=" + cookie[1] : "",
             'X-Csrf-Token': csrf,
             "Content-Type": "application/json"
         },
@@ -183,14 +253,15 @@ const request = async (api, csrf = "", data = {}, method = "POST", useCookie = t
 }
 
 const getCSRF = async () => {
-    log(chalk.blue.bold("[LOGGER] : Getting CSRF Token"))
-    weblog("CSRF", "Getting CSRF Token")
+    const spinner = createSpinner("Getting CSRF Token")
+    spinner.start() 
+    // weblog("CSRF", "Getting CSRF Token")
     return new Promise(resolve => {
         request("auth." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v2/logout")
             .catch(async res => {
                 var csrf = res.response?.headers?.['x-csrf-token']
                 if (!csrf) {
-                    log(chalk.red.bold("[ERROR] : Invalid cookie"))
+                    spinner.error({ text: chalk.redBright("Invalid cookie") })
                     if (cookies.length > 0) {
                         log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                         cookie = cookies[cookieLength++]
@@ -198,111 +269,72 @@ const getCSRF = async () => {
                     }
                     process.exit()
                 }
-                log(chalk.greenBright.bold("[LOGGER] : CSRF Token : " + csrf))
+                spinner.success({ text: chalk.greenBright("CSRF Token : " + csrf), mark:' '})
                 resolve(csrf)
             })
     })
 }
 
 const getGroup = async () => {
-    log(chalk.blue.bold("[LOGGER] : Getting Group Info"))
+    const spinner = createSpinner("Getting Group").start()
     const id = () => Math.floor(Math.random() * (range.max - range.min) + range.min)
     return new Promise(resolve => {
-        //GET REQUEST 
+        //GET REQUEST
         request("groups.roblox.com/v1/groups/" + id(), undefined, undefined, "GET", false) //roproxy returns cloudflare html page
             .then(res => {
+                spinner.success({ text : "Group ID : " + res.data.id, mark:" " })
                 resolve(res.data.id)
             })
             .catch(async () => {
-                log(chalk.red.bold("[ERROR] : Group is invalid"))
-                log(chalk.blue.bold("[LOGGER] : Recommended to use a deafult range [8802477, 8802487]"))
+                spinner.warn({ text: chalk.yellowBright("Invalid id Retrying..."),mark:"" })
                 await new Promise(resolve => setTimeout(resolve, 1000))
                 resolve(getGroup(id()));
             })
     })
 }
 
-const sendMessage = async (id, csrf) => {
-    log(chalk.blue.bold("[LOGGER] : Sending Message"))
-    const raw = (await request("groups.roblox.com/v1/groups/" + id)).catch(() => {
-        log(chalk.red.bold("[ERROR] : Group is invalid"))
-        process.exit()
-    }).data
-    const canSend = await request("privatemessages.roproxy.com/v1/messages/" + raw.owner.userId + "/can-message", csrf)
-    if (!canSend.data.canMessage) {
-        log(chalk.red.bold("[ERROR] : Cannot send message to this user"))
-        return
-    }
-    const format = {
-        "subject": "Group Ally Request",
-        "body": "yo i want to ally your group, please accept it :D \n also please join my group : http://www.roproxy.com/groups/" + group + "/", //don't fix the grammar caz it will be humanable and legit like
-        "recipientId": raw.owner.userId,
-    }
-    request("privatemessages.roproxy.com/v1/messages/send", csrf, format)
-        .then(() => {
-            log(chalk.green.bold("[SUCCESS] : Message sent"))
-            resolve(csrf)
-        })
-        .catch(() => {
-            log(chalk.blue.bold("[LOGGER] : Message could not be sent, skipping..."))
-            reject(csrf)
-        })
-}
-
-
-
 const sendAlly = async (id, csrf) => {
-    log(chalk.blue.bold("[LOGGER] : Sending ally request to " + id))
+    const spinner = createSpinner("Sending Ally Request ", id).start()
     return new Promise(async (resolve, reject) => {
         try {
             await request("groups." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v1/groups/" + group + "/relationships/allies/" + id, csrf)
-            log(chalk.green("[Success] : Sent to" + id))
-            if (webhook != "") await axios.post(webhook, {
-                avatar_url: "https://cdn.discordapp.com/avatars/715220624154558554/711c4bd66b0c300e6e31837c77879e8b.png?size=1024",
-                embeds: [
-                    {
-                        author: {
-                            name: "Ally Sent",
-                            url: "https://roblox.com/groups/" + id
-                        }
-                    }]
-            }).catch(() => { })
-            sendMsg && await sendMessage(id, csrf)
+            spinner.success({ text: chalk.greenBright("Sent to " + id), mark:"" })
             resolve()
         } catch (err) {
             if (err?.response?.status == 429) {
-                log(chalk.red("[Error] : Rate Limited (429)"))
+                spinner.warn({ text: chalk.yellowBright("Rate Limited(429)")})
                 if (proxyType == 2) {
                     log(chalk.magentaBright.bold("[LOGGER] : Trying next proxy"));
                     proxyLength++
                     await new Promise(resolve => setTimeout(resolve, 1000))
                     resolve()
                 }
-                if (useMultiCookie == "Y" || useMultiCookie == "y") {
-                    log(chalk.magentaBright.bold("[LOGGER] : Using next cookie"));
+                if (useMultiCookie) {
+                    log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                     cookie = cookies[cookieLength++]
                     reject();
                 }
-                await sleep(20000)
+                await sleep(1000 * 60 * 10)
                 resolve()
+
             } else if (err?.response?.status == 403) {
-                log(chalk.red("[Error] : Forbidden (403)"))
-                if (useMultiCookie == "Y" || useMultiCookie == "y") {
-                    log(chalk.magentaBright.bold("[LOGGER] : Invalid cookie"));
+                if (useMultiCookie) {
+                    spinner.warn({ text: chalk.yellowBright("Invalid cookie or insufficient permission")})
                     log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                     cookie = cookies[cookieLength++]
                     reject();
                 }
                 log(chalk.magentaBright.bold("[LOGGER] : check if the bot is in the group and has permission to ally as well as the the cookie is valid"))
                 log(chalk.magentaBright.bold("[LOGGER] : Retrying in 20 seconds"))
-                await new Promise(resolve => setTimeout(resolve, 20))
+                await new Promise(resolve => setTimeout(resolve, 1000 * 20))
                 resolve()
             } else if (err?.response?.status == 404) {
                 resolve() //group not found which is too rare, only occur when the group is deleted after we get the group
             } else if (err?.response?.status == 400) {
-                log(chalk.red("[ERROR] : Already sent ally request"))
+                spinner.warn({ text: chalk.yellowBright("Already sent ally request"), mark : chalk.yellowBright("[!]")})
                 resolve();
             } else {
+                spinner.error({ text: chalk.redBright("Error Occured")})
                 log(chalk.yellowBright("[DEBUGGER] : " + err))
                 reject();
             }
@@ -321,9 +353,9 @@ const main = async (id, index = 0, csrf) => {
                 await sendAlly(id, csrf);
             }
             if (res.data.totalGroupCount >= 100) return resolve(await main(id, res.data.nextRowIndex)); // Fetch the next page recursively
-            resolve(); // there is no more page stop the recursion
+            resolve(); // there is no more page, stop the recursion
         } catch (error) {
-            console.log(error.response.data)
+                console.log(error.response.data)
             //Incase some error occurs, we will skip the group
             log(chalk.red.bold("[ERROR] : unable to get group allies"));
             csrf = await getCSRF();
@@ -348,42 +380,22 @@ const main = async (id, index = 0, csrf) => {
     log(chalk.blue.bold("\t\t\t\t\tDiscord :  _mrunknown_"))
     log(chalk.blue.bold("\t\t\t\t\tGithub :  @CodeCarbon"))
     log(chalk.blue.bold("\t\t\t\t\tDiscord ~ Server : https://discord.gg/QT4MUZKjjp\n\n"))
+
+    const spinner = createSpinner(" Checking For Updates").start()
+
     const version = (await axios.get("http://raw.githubusercontent.com/CodeCarbon/Roblox-Ally-Bot/main/version")).data
-    fs.readFileSync("version").toString() !== version.toString() && await update()
-    var useMultiCookie = "N";
-    log(chalk.magentaBright.bold("[OPTIONS] \n\t 0. no-proxy \n\t 1. roproxy \n\t 2. Custom proxy[from proxy.txt] <Recommend>\n "))
-    const ans = await rl.question(chalk.redBright.bold("[INPUT] ~ (0 - 2) : "))
-    if (ans == "1") {
-        proxyType = 1
-        log(chalk.blue.bold("[LOGGER] : Using roproxy"))
-    } else if (ans == "2") {
-        proxyType = 2
-        log(chalk.blue.bold("[LOGGER] : Using proxy from proxy.txt[Format : IP:PORT]"))
+    if (fs.readFileSync("version").toString() !== version.toString()) {
+        spinner.warn({ text: chalk.yellowBright(" New version available...\n") })
+        process.exit();
     } else {
-        log(chalk.blue.bold("[LOGGER] : No-Proxy"))
+        spinner.success({ text: chalk.greenBright(" UP-TO-DATE\n") })
     }
-    if (cookie.length < 1) {
-        log(chalk.blue.bold("[LOGGER] : Cookie is empty"))
-        await ask()
-    } else {
-        const answer = await rl.question(chalk.redBright.bold("[INPUT] Use Previous configuration ? [Y/N] : "))
-        answer == "N" || answer == "n" ? await ask() : log(chalk.blue.bold("[LOGGER] : Using previous configuration"))
-    }
-    if (fs.readdirSync("./").includes("cookies.json")) {
-        log(chalk.magentaBright.bold("[LOGGER] : cookies.json is detected[Contact me on discord _mrunknown_ if you wanna use this]"));
-        useMultiCookie = await rl.question(chalk.redBright.bold("[INPUT] Use cookies.json ? [Y/N] : "))
-    }
+
+    await askStart();
+
     log(chalk.blue.bold("[LOGGER] : Starting..."))
-    if (useMultiCookie == "Y" || useMultiCookie == "y") {
-        cookies = JSON.parse(fs.readFileSync("cookies.json"))
-        if (cookies.length == 0) {
-            log(chalk.red.bold("[ERROR] : cookies.json is empty"))
-            process.exit()
-        }
-        log(chalk.blue.bold("[LOGGER] : " + cookies.length + " accounts detected"))
-        cookie = cookies[cookieLength]
-    }
-    weblog("START", "Bot Started")
+
+    // weblog("START", "Bot Started")
     var csrf = await getCSRF()
     while (true) {
         try {
