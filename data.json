@@ -1,1 +1,10 @@
-{"cookie":[],"group":"6290210","webhook":"","range":{"min":8802477,"max":8802487}}
+{
+    "cookie": [
+    ],
+    "group": "6290210",
+    "webhook": "",
+    "range": {
+        "min": 8802477,
+        "max": 8802487
+    }
+}

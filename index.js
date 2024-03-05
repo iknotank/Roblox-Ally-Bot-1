@@ -44,17 +44,15 @@ var useMultiCookie = false
 
 
 /*
-    ask() : user input and store to data.json
-    request() : send request to roblox
-    getCSRF() : get csrf token for request
-    sendMessage() : send message to group owner
-    getGroup() : get a random group id within range
-    sendAlly() : send ally request to group
-    main() : main function
-    update() : update the bot to the latest version from github
-    sleep() : sleep for a given time
-    getProxy() : get proxy from proxy.txt
-    weblog() : send message to webhook
+    getProxy : Get proxy from proxy.txt
+    sleep : Sleep for a specific time
+    askStart : Ask for the start configuration
+    ask : Ask for the configuration for cookie, group, webhook,etc
+    request : Make a request to the api
+    getCSRF : Get CSRF token
+    getGroup : Get Group ID
+    sendAlly : Send ally request
+    main : Main function
 */
 
 const getProxy = async () => {
@@ -108,14 +106,15 @@ const askStart = async () => {
             default: "Single Cookie"
         }
     ])
-    if (ans.proxyType == "1") {
+    if (ans.proxyType == "No-Proxy") {
+        proxyType = 0
+        log(chalk.blue.bold("[LOGGER] : Running without proxy"))
+    } else if (ans.proxyType == "roproxy") {
         proxyType = 1
         log(chalk.blue.bold("[LOGGER] : Using roproxy"))
-    } else if (ans.proxyType == "2") {
+    } else {
         proxyType = 2
         log(chalk.blue.bold("[LOGGER] : Using proxy from proxy.txt<IP:PORT>"))
-    } else {
-        log(chalk.blue.bold("[LOGGER] : No-Proxy"))
     }
 
     if (ans.cookie == "Single Cookie") {
@@ -124,14 +123,14 @@ const askStart = async () => {
     } else {
         useMultiCookie = true
         log(chalk.blue.bold("[LOGGER] : Using Multi Cookie"))
-         //log(chalk.blue.bold("[LOGGER] : Look at dash for more info"));
-         log(chalk.blue.magentaBright("Look at readme.md file on github for more info"));
-            if (cookies.length == 0) {
-                log(chalk.red.bold("[ERROR] : cookies.json is empty"))
-                process.exit()
-            }
-            log(chalk.blue.bold("[LOGGER] : " + cookies.length + " accounts detected"))
-            cookie = cookies[cookieLength]
+        //log(chalk.blue.bold("[LOGGER] : Look at dash for more info"));
+        log(chalk.blue.magentaBright("Look at readme.md file on github for more info"));
+        if (cookies.length == 0) {
+            log(chalk.red.bold("[ERROR] : cookies.json is empty"))
+            process.exit()
+        }
+        log(chalk.blue.bold("[LOGGER] : " + cookies.length + " accounts detected"))
+        cookie = cookies[cookieLength]
     }
     if (cookie.length < 0 && !useMultiCookie) {
         await ask()
@@ -225,7 +224,7 @@ const ask = async () => {
 }
 
 // anyone cares about impure fn 🥱 ?
-const request = async (api, csrf = "", data = {}, method = "POST", useCookie = true) => {
+const request = async (api, csrf = "", method = "POST") => {
     var proxy = {
         host: "",
         port: "",
@@ -233,43 +232,42 @@ const request = async (api, csrf = "", data = {}, method = "POST", useCookie = t
     }
     if (proxyType == 2) {
         const proxySplit = (await getProxy()).split(":")
-        proxy.host = proxySplit[0], proxy.port = proxySplit[1]
+        proxy.host = proxySplit[0], proxy.port = parseInt(proxySplit[1])
     }
     return axios("https://" + api, {
         method: method,
         headers: {
             //to prevent auto log out while using with cloud
-            Cookie: useCookie ? ".ROBLOSECURITY=" + cookie[0] + "; .RBXIDCHECK=" + cookie[1] : "",
+            Cookie: ".ROBLOSECURITY=" + cookie[0] + (cookie[1] ? "; .RBXIDCHECK=" + cookie[1] : ""),
             'X-Csrf-Token': csrf,
             "Content-Type": "application/json"
         },
-        data: data,
         proxy: proxyType == 2 ? {
             host: proxy.host,
             port: proxy.port,
-            protocol: "https"
+            protocol: "http"
         } : undefined
     })
 }
 
 const getCSRF = async () => {
     const spinner = createSpinner("Getting CSRF Token")
-    spinner.start() 
+    spinner.start()
     // weblog("CSRF", "Getting CSRF Token")
     return new Promise(resolve => {
         request("auth." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v2/logout")
             .catch(async res => {
                 var csrf = res.response?.headers?.['x-csrf-token']
+                console.log(res)
                 if (!csrf) {
                     spinner.error({ text: chalk.redBright("Invalid cookie") })
                     if (cookies.length > 0) {
                         log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                         cookie = cookies[cookieLength++]
                         csrf = await getCSRF();
-                    }
-                    process.exit()
+                    } else process.exit()
                 }
-                spinner.success({ text: chalk.greenBright("CSRF Token : " + csrf), mark:' '})
+                spinner.success({ text: chalk.greenBright("CSRF Token : " + csrf), mark: ' ' })
                 resolve(csrf)
             })
     })
@@ -280,13 +278,13 @@ const getGroup = async () => {
     const id = () => Math.floor(Math.random() * (range.max - range.min) + range.min)
     return new Promise(resolve => {
         //GET REQUEST
-        request("groups.roblox.com/v1/groups/" + id(), undefined, undefined, "GET", false) //roproxy returns cloudflare html page
+        request("groups.roblox.com/v1/groups/" + id(), undefined, "GET", false) //roproxy returns cloudflare html page
             .then(res => {
-                spinner.success({ text : "Group ID : " + res.data.id, mark:" " })
+                spinner.success({ text: "Group ID : " + res.data.id, mark: " " })
                 resolve(res.data.id)
             })
             .catch(async () => {
-                spinner.warn({ text: chalk.yellowBright("Invalid id Retrying..."),mark:"" })
+                spinner.warn({ text: chalk.yellowBright("Invalid id Retrying..."), mark: "" })
                 await new Promise(resolve => setTimeout(resolve, 1000))
                 resolve(getGroup(id()));
             })
@@ -298,11 +296,11 @@ const sendAlly = async (id, csrf) => {
     return new Promise(async (resolve, reject) => {
         try {
             await request("groups." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v1/groups/" + group + "/relationships/allies/" + id, csrf)
-            spinner.success({ text: chalk.greenBright("Sent to " + id), mark:"" })
+            spinner.success({ text: chalk.greenBright("Sent to " + id), mark: "" })
             resolve()
         } catch (err) {
             if (err?.response?.status == 429) {
-                spinner.warn({ text: chalk.yellowBright("Rate Limited(429)")})
+                spinner.warn({ text: chalk.yellowBright("Rate Limited(429)") })
                 if (proxyType == 2) {
                     log(chalk.magentaBright.bold("[LOGGER] : Trying next proxy"));
                     proxyLength++
@@ -319,7 +317,7 @@ const sendAlly = async (id, csrf) => {
 
             } else if (err?.response?.status == 403) {
                 if (useMultiCookie) {
-                    spinner.warn({ text: chalk.yellowBright("Invalid cookie or insufficient permission")})
+                    spinner.warn({ text: chalk.yellowBright("Invalid cookie or insufficient permission") })
                     log(chalk.magentaBright.bold("[LOGGER] : Trying next cookie"));
                     cookie = cookies[cookieLength++]
                     reject();
@@ -331,10 +329,10 @@ const sendAlly = async (id, csrf) => {
             } else if (err?.response?.status == 404) {
                 resolve() //group not found which is too rare, only occur when the group is deleted after we get the group
             } else if (err?.response?.status == 400) {
-                spinner.warn({ text: chalk.yellowBright("Already sent ally request"), mark : chalk.yellowBright("[!]")})
+                spinner.warn({ text: chalk.yellowBright("Already sent ally request"), mark: chalk.yellowBright("[!]") })
                 resolve();
             } else {
-                spinner.error({ text: chalk.redBright("Error Occured")})
+                spinner.error({ text: chalk.redBright("Error Occured") })
                 log(chalk.yellowBright("[DEBUGGER] : " + err))
                 reject();
             }
@@ -347,7 +345,7 @@ const main = async (id, index = 0, csrf) => {
     return new Promise(async (resolve,) => {
         log(chalk.blue.bold("[LOGGER] : Getting getting group allies id : " + id + `\n${index !== 0 ? "index : " + index : ""}`));
         try {
-            const res = await request("groups." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v1/groups/" + id + "/relationships/allies?StartRowIndex=" + index + "&MaxRows=100", undefined, undefined, "GET", false); //most likey it will fetch all
+            const res = await request("groups." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v1/groups/" + id + "/relationships/allies?StartRowIndex=" + index + "&MaxRows=100", csrf, "GET"); //most likey it will fetch all
             if (res.data.relatedGroups.length < 1) return resolve();
             for (id of res.data.relatedGroups.map(e => e.id.toString())) {
                 await sendAlly(id, csrf);
@@ -355,7 +353,7 @@ const main = async (id, index = 0, csrf) => {
             if (res.data.totalGroupCount >= 100) return resolve(await main(id, res.data.nextRowIndex)); // Fetch the next page recursively
             resolve(); // there is no more page, stop the recursion
         } catch (error) {
-                console.log(error.response.data)
+            console.log(error.response.data)
             //Incase some error occurs, we will skip the group
             log(chalk.red.bold("[ERROR] : unable to get group allies"));
             csrf = await getCSRF();
