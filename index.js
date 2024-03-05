@@ -258,7 +258,6 @@ const getCSRF = async () => {
         request("auth." + (proxyType == 1 ? "roproxy" : "roblox") + ".com/v2/logout")
             .catch(async res => {
                 var csrf = res.response?.headers?.['x-csrf-token']
-                console.log(res)
                 if (!csrf) {
                     spinner.error({ text: chalk.redBright("Invalid cookie") })
                     if (cookies.length > 0) {
